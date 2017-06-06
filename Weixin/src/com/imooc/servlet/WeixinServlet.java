@@ -28,7 +28,6 @@ public class WeixinServlet extends HttpServlet {
 		String timestamp = req.getParameter("timestamp");
 		String nonce = req.getParameter("nonce");
 		String echostr = req.getParameter("echostr");
-		
 		PrintWriter out = resp.getWriter();
 		if(CheckUtil.checkSignature(signature, timestamp, nonce)){
 			out.print(echostr);
@@ -67,7 +66,7 @@ public class WeixinServlet extends HttpServlet {
 					if("".equals(word)){
 						message = MessageUtil.initText(toUserName, fromUserName, MessageUtil.threeMenu());
 					}else{
-						message = MessageUtil.initText(toUserName, fromUserName, WeixinUtil.translate(word));
+						message = MessageUtil.initText(toUserName, fromUserName, WeixinUtil.translateFull(word));
 					}
 				}
 			}else if(MessageUtil.MESSAGE_EVNET.equals(msgType)){
@@ -75,7 +74,7 @@ public class WeixinServlet extends HttpServlet {
 				if(MessageUtil.MESSAGE_SUBSCRIBE.equals(eventType)){
 					message = MessageUtil.initText(toUserName, fromUserName, MessageUtil.menuText());
 				}else if(MessageUtil.MESSAGE_CLICK.equals(eventType)){
-					message = MessageUtil.initText(toUserName, fromUserName, MessageUtil.menuText());
+					message = MessageUtil.initMusicMessage(toUserName, fromUserName);
 				}else if(MessageUtil.MESSAGE_VIEW.equals(eventType)){
 					String url = map.get("EventKey");
 					message = MessageUtil.initText(toUserName, fromUserName, url);

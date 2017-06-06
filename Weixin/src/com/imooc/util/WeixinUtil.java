@@ -24,6 +24,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
@@ -44,8 +46,8 @@ import com.imooc.trans.TransResult;
  *
  */
 public class WeixinUtil {
-	private static final String APPID = "wxdd76438574cc239e";
-	private static final String APPSECRET = "8fb4f41bd36156e171631d371750b519";
+	private static final String APPID = "wx7c8c9576bb717b09";
+	private static final String APPSECRET = "acc2fd8effb4390cde8469fc9771a2cb";
 	
 	private static final String ACCESS_TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=APPSECRET";
 	
@@ -65,6 +67,8 @@ public class WeixinUtil {
 	 */
 	public static JSONObject doGetStr(String url) throws ParseException, IOException{
 		DefaultHttpClient client = new DefaultHttpClient();
+		// 2017.06.06  新增以下方法以不保存和发送Cookie，否则无法使用百度翻译api
+		client.getParams().setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 		HttpGet httpGet = new HttpGet(url);
 		JSONObject jsonObject = null;
 		HttpResponse httpResponse = client.execute(httpGet);
@@ -218,22 +222,22 @@ public class WeixinUtil {
 	public static Menu initMenu(){
 		Menu menu = new Menu();
 		ClickButton button11 = new ClickButton();
-		button11.setName("click菜单");
+		button11.setName("听个曲儿");
 		button11.setType("click");
 		button11.setKey("11");
 		
 		ViewButton button21 = new ViewButton();
-		button21.setName("view菜单");
+		button21.setName("马上订房");
 		button21.setType("view");
-		button21.setUrl("http://www.imooc.com");
+		button21.setUrl("http://www.plateno.com");
 		
 		ClickButton button31 = new ClickButton();
-		button31.setName("扫码事件");
+		button31.setName("扫一下你的码");
 		button31.setType("scancode_push");
 		button31.setKey("31");
 		
 		ClickButton button32 = new ClickButton();
-		button32.setName("地理位置");
+		button32.setName("发个位置试试");
 		button32.setType("location_select");
 		button32.setKey("32");
 		
@@ -244,7 +248,15 @@ public class WeixinUtil {
 		menu.setButton(new Button[]{button11,button21,button});
 		return menu;
 	}
-	
+
+	/**
+	 * 创建自定义菜单
+	 * @param token
+	 * @param menu
+	 * @return
+	 * @throws ParseException
+	 * @throws IOException
+	 */
 	public static int createMenu(String token,String menu) throws ParseException, IOException{
 		int result = 0;
 		String url = CREATE_MENU_URL.replace("ACCESS_TOKEN", token);
@@ -254,13 +266,27 @@ public class WeixinUtil {
 		}
 		return result;
 	}
-	
+
+	/**
+	 * 查询自定义菜单
+	 * @param token
+	 * @return
+	 * @throws ParseException
+	 * @throws IOException
+	 */
 	public static JSONObject queryMenu(String token) throws ParseException, IOException{
 		String url = QUERY_MENU_URL.replace("ACCESS_TOKEN", token);
 		JSONObject jsonObject = doGetStr(url);
 		return jsonObject;
 	}
-	
+
+	/**
+	 * 删除自定义菜单
+	 * @param token
+	 * @return
+	 * @throws ParseException
+	 * @throws IOException
+	 */
 	public static int deleteMenu(String token) throws ParseException, IOException{
 		String url = DELETE_MENU_URL.replace("ACCESS_TOKEN", token);
 		JSONObject jsonObject = doGetStr(url);
@@ -270,48 +296,26 @@ public class WeixinUtil {
 		}
 		return result;
 	}
-	
-	public static String translate(String source) throws ParseException, IOException{
-		String url = "http://openapi.baidu.com/public/2.0/translate/dict/simple?client_id=jNg0LPSBe691Il0CG5MwDupw&q=KEYWORD&from=auto&to=auto";
-		url = url.replace("KEYWORD", URLEncoder.encode(source, "UTF-8"));
-		JSONObject jsonObject = doGetStr(url);
-		String errno = jsonObject.getString("errno");
-		Object obj = jsonObject.get("data");
-		StringBuffer dst = new StringBuffer();
-		if("0".equals(errno) && !"[]".equals(obj.toString())){
-			TransResult transResult = (TransResult) JSONObject.toBean(jsonObject, TransResult.class);
-			Data data = transResult.getData();
-			Symbols symbols = data.getSymbols()[0];
-			String phzh = symbols.getPh_zh()==null ? "" : "中文拼音："+symbols.getPh_zh()+"\n";
-			String phen = symbols.getPh_en()==null ? "" : "英式英标："+symbols.getPh_en()+"\n";
-			String pham = symbols.getPh_am()==null ? "" : "美式英标："+symbols.getPh_am()+"\n";
-			dst.append(phzh+phen+pham);
-			
-			Parts[] parts = symbols.getParts();
-			String pat = null;
-			for(Parts part : parts){
-				pat = (part.getPart()!=null && !"".equals(part.getPart())) ? "["+part.getPart()+"]" : "";
-				String[] means = part.getMeans();
-				dst.append(pat);
-				for(String mean : means){
-					dst.append(mean+";");
-				}
-			}
-		}else{
-			dst.append(translateFull(source));
-		}
-		return dst.toString();
-	}
-	
+
+	/**
+	 * 百度翻译api
+	 * @param source
+	 * @return
+	 * @throws ParseException
+	 * @throws IOException
+	 */
 	public static String translateFull(String source) throws ParseException, IOException{
-		String url = "http://openapi.baidu.com/public/2.0/bmt/translate?client_id=jNg0LPSBe691Il0CG5MwDupw&q=KEYWORD&from=auto&to=auto";
+		String sign = new String(("20170606000052630"+source+"1435660288"+"NAJ6g9OyUIf_lIFUsAl_").getBytes("UTF-8"));
+		sign = MD5.md5(sign);
+		String url = "http://api.fanyi.baidu.com/api/trans/vip/translate?q=KEYWORD&from=auto&to=auto&appid=20170606000052630&salt=1435660288&sign="+sign;
 		url = url.replace("KEYWORD", URLEncoder.encode(source, "UTF-8"));
 		JSONObject jsonObject = doGetStr(url);
-		StringBuffer dst = new StringBuffer();
-		List<Map> list = (List<Map>) jsonObject.get("trans_result");
-		for(Map map : list){
-			dst.append(map.get("dst"));
-		}
-		return dst.toString();
+		StringBuilder dst = new StringBuilder();
+			List<Map> list = (List<Map>) jsonObject.get("trans_result");
+			for(Map map : list){
+				dst.append(map.get("dst"));
+			}
+			System.out.println(dst.toString());
+			return dst.toString();
 	}
 }
